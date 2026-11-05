@@ -151,6 +151,21 @@ const discoverBase = (options) => discoverInstalled({ ...options, metaType: 0x80
 const discoverApplications = (options) =>
   discoverInstalled({ ...options, title: '0000000000000000', metaType: 0x80, kind: 'applications' });
 
+function selectUpdates(records, version) {
+  if (version !== undefined) {
+    const selected = records.filter(record => record.version === version);
+    if (!selected.length) throw new Error('Update version ' + version + ' was not found on the console');
+    return selected;
+  }
+
+  const latest = new Map();
+  for (const record of records) {
+    latest.set(record.contentTitle, Math.max(latest.get(record.contentTitle) ?? 0, record.version));
+  }
+  // Keep storage alternatives for the selected version, without mounting superseded updates too.
+  return records.filter(record => record.version === latest.get(record.contentTitle));
+}
+
 // Resolve an installed content record without mounting its filesystem.
 async function resolveContent({ s, root, domain, service, title, storage, base, update, dlc, dataPatch, content, contentType = content?.contentType ?? 1 }) {
   const contentName = ['Meta', 'Program', 'Data', 'Control', 'HtmlDocument', 'LegalInformation', 'DeltaFragment'][contentType];
@@ -483,6 +498,7 @@ async function discoverGames({ s, root, domain, service, filesystem, shouldStop 
 
 module.exports = {
   discoverGames, discoverBase, discoverUpdates, discoverDlc, discoverDataPatches,
+  selectUpdates,
   resolveContent, resolveProgramContent, resolveDlcContent, resolveDataPatchContent, findOriginalContent,
   isInstalledUpdate, programMatchesApplication,
 };

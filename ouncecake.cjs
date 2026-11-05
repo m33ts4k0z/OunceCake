@@ -7,15 +7,17 @@ const { discoverGames } = require('./engine/content.cjs');
 const { prepareGame } = require('./engine/mounts.cjs');
 const { deployFtp, readImage } = require('./engine/ftp.cjs');
 
-const USAGE = 'Usage: node ouncecake.cjs <run-directory> [title-id] [--port 2121] [--tar]\n' +
+const USAGE = 'Usage: node ouncecake.cjs <run-directory> [title-id] [--port 2121] [--tar] [--update-version <version>]\n' +
               'Use the run dir given by ns2jb (Run folder: <whatever>)\n' +
               'You can also provide a title ID to skip the selection menu and just mount a specific game\n' +
-              '--tar exposes the data as tar files instead of raw files, allowing for faster downloads\n';
+              '--tar exposes the data as tar files instead of raw files, allowing for faster downloads\n' +
+              'Only the newest update is mounted by default; --update-version selects another discovered version\n';
 
 function getArgs(argv) {
   const args = [];
   let port = 2121;
   let tar = false;
+  let updateVersion;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -37,6 +39,15 @@ function getArgs(argv) {
       continue;
     }
 
+    if (a === '--update-version') {
+      const value = argv[++i];
+      if (!/^\d+$/.test(value ?? '') || Number(value) > 0xffffffff) {
+        throw new Error('Invalid --update-version value (expected a decimal uint32)\n' + USAGE);
+      }
+      updateVersion = Number(value);
+      continue;
+    }
+
     if (a.startsWith('--')) {
       throw new Error('Unknown option: ' + a + '\n' + USAGE);
     }
@@ -53,7 +64,7 @@ function getArgs(argv) {
   }
 
   const title = args.length === 2 ? titleId(args[1]) : undefined;
-  return { run: path.resolve(args[0]), title, port, tar };
+  return { run: path.resolve(args[0]), title, port, tar, updateVersion };
 }
 
 const storageNames = { 2: 'Game card', 4: 'Internal', 5: 'SD' };
@@ -140,7 +151,8 @@ async function main(argv = process.argv.slice(2)) {
       if (!selected || shouldStop()) return;
       title = selected.title;
     }
-    const prepared = await prepareGame({ attachment, title, shouldStop, tar: options.tar });
+    const prepared = await prepareGame({ attachment, title, shouldStop, tar: options.tar,
+      updateVersion: options.updateVersion });
     if (shouldStop()) return;
     server = await deployFtp({ attachment, image, ...prepared, port });
     console.log('FTP up! ftp://<switch 2 ip>:' + port);

@@ -6,6 +6,7 @@
   "engines": {"node": ">=22"},
   "scripts": {
     "start": "node ouncecake.cjs",
-    "build": "node engine/build-ftp.cjs"
+    "build": "node engine/build-ftp.cjs",
+    "test": "node --test"
   }
 }

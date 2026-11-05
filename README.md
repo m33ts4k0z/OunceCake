@@ -32,6 +32,20 @@ git clone https://github.com/misshexa66/OunceCake.git
 
 OunceCake now has support for showing game data as .tar files instead of raw folders, allowing for faster downloading. Add `--tar` to the launch args.
 
+## Update versions
+
+By default, OunceCake mounts only the newest discovered version of each update across internal storage, SD and game card. All programs in that version are included, including Switch 2 Edition content. The base game and DLC are still exposed.
+
+Merged update filesystems stay open for FTP. Mounting older versions alongside the newest one adds console resource usage; [issue #10](https://github.com/misshexa66/OunceCake/issues/10) reports a Z-A crash while opening an older update after the newer version. Selecting one version avoids that mounting sequence in both normal and tar mode. The console crash still needs hardware verification.
+
+To dump another discovered version in a separate session, use its decimal version number:
+
+```sh
+node ouncecake.cjs <path-to-ns2jb-run> --update-version 65536
+```
+
+Stop OunceCake with Ctrl-C before starting the next session. An unavailable version produces an error before any game content is mounted.
+
 ## Licensing
 
 OunceCake is licensed under the terms of the GPLv2 (because it borrows a tiny bit of code from [Atmosphere](https://github.com/Atmosphere-NX/Atmosphere))

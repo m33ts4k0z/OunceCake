@@ -1,7 +1,7 @@
 const path = require('node:path');
 const { TextDecoder } = require('node:util');
 const { success, pathRequest, idBytes, resultError, cleanup, closeHandles, throwIfCancelled } = require('./protocol.cjs');
-const { discoverBase, discoverUpdates, discoverDlc, discoverDataPatches, resolveContent } = require('./content.cjs');
+const { discoverBase, discoverUpdates, discoverDlc, discoverDataPatches, resolveContent, selectUpdates } = require('./content.cjs');
 const { createProgramMounts, prepareInstalledLicense } = require('./program.cjs');
 const { openDlcPatch } = require('./dlc.cjs');
 const { planTar, MEMBER_BYTES } = require('./tar.cjs');
@@ -530,7 +530,7 @@ function buildIndex(views, { tar = false } = {}) {
   return bytes;
 }
 
-async function prepareGame({ attachment: a, title, shouldStop = () => false, tar = false }) {
+async function prepareGame({ attachment: a, title, shouldStop = () => false, tar = false, updateVersion }) {
   const views = [];
   const sources = [];
   const absentSources = [];
@@ -697,7 +697,14 @@ async function prepareGame({ attachment: a, title, shouldStop = () => false, tar
 
   const bases = await discoverBase({ ...a, title });
   cancelled();
-  const updates = await discoverUpdates({ ...a, title });
+  const installedUpdates = await discoverUpdates({ ...a, title });
+  const updates = selectUpdates(installedUpdates, updateVersion);
+  const skippedVersions = [...new Set(installedUpdates.filter(record => !updates.includes(record))
+    .map(record => record.version))];
+  if (skippedVersions.length) {
+    console.log('Skipping other update versions: ' + skippedVersions.join(', ') +
+      '. Use --update-version <version> to dump one separately.');
+  }
   cancelled();
 
   const dlc = await discoverDlc({ ...a, title });
